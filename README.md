@@ -31,12 +31,17 @@ A web-based Flash (SWF) game emulator that uses Ruffle to play Flash games in mo
 
 1. Open the project folder in VS Code
 
-2. Start the server by opening a terminal in VS Code (Terminal > New Terminal) and running:
+2. Navigate to project folder:
+   ```bash
+   cd Flashantress
+   ```
+   
+4. Start the server by opening a terminal in VS Code (Terminal > New Terminal) and running:
    ```bash
    node server.js
    ```
 
-3. Open your browser and navigate to:
+5. Open your browser and navigate to:
    ```
    http://localhost:8080
    ```
