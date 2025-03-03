@@ -1,0 +1,29 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flashantress</title>
+  <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Flashantress</h1>
+    
+    <div class="upload-section">
+      <input type="file" id="swf-upload" accept=".swf" />
+      <label for="swf-upload" class="upload-button">Choose SWF File</label>
+      <p id="file-name">No file selected</p>
+    </div>
+    
+    <div id="player-container">
+      <div id="player"></div>
+      <button id="fullscreen-button" class="fullscreen-button">Fullscreen</button>
+    </div>
+  </div>
+  
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+  <script src="script.js"></script>
+</body>
+</html>
