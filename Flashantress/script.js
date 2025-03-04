@@ -1,13 +1,16 @@
+
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('swf-upload');
   const fileNameDisplay = document.getElementById('file-name');
   const playerContainer = document.getElementById('player');
   const playerWrapper = document.getElementById('player-container');
   const fullscreenButton = document.getElementById('fullscreen-button');
-  const historyContainer = document.getElementById('history-list');
+  const historyContainer = document.getElementById('history-section');
+  const historyList = document.getElementById('history-list');
 
   let ruffle = null;
   let player = null;
+  let originalAspectRatio = 4/3; // Default aspect ratio
   let fileHistory = JSON.parse(localStorage.getItem('flashantress_history') || '[]');
 
   // Update history display on page load
@@ -55,11 +58,27 @@ document.addEventListener('DOMContentLoaded', () => {
       // Resize the player when entering fullscreen
       if (player && player.querySelector('ruffle-player')) {
         const rufflePlayer = player.querySelector('ruffle-player');
-        rufflePlayer.style.width = '100%';
-        rufflePlayer.style.height = '100%';
+        
+        // Calculate the dimensions that preserve aspect ratio and fill the screen height
+        const screenHeight = window.innerHeight;
+        const screenWidth = window.innerWidth;
+        
+        // Calculate dimensions to maintain aspect ratio and fill height
+        let playerHeight = screenHeight;
+        let playerWidth = playerHeight * originalAspectRatio;
+        
+        // If the calculated width is greater than the screen width, recalculate based on width
+        if (playerWidth > screenWidth) {
+          playerWidth = screenWidth;
+          playerHeight = playerWidth / originalAspectRatio;
+        }
+        
+        rufflePlayer.style.width = playerWidth + 'px';
+        rufflePlayer.style.height = playerHeight + 'px';
         rufflePlayer.style.position = 'absolute';
-        rufflePlayer.style.top = '0';
-        rufflePlayer.style.left = '0';
+        rufflePlayer.style.top = '50%';
+        rufflePlayer.style.left = '50%';
+        rufflePlayer.style.transform = 'translate(-50%, -50%)';
 
         // Some SWF files may need config adjustment in fullscreen
         if (rufflePlayer.instance && rufflePlayer.instance.set_fullscreen) {
@@ -72,8 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset player size when exiting fullscreen
       if (player && player.querySelector('ruffle-player')) {
         const rufflePlayer = player.querySelector('ruffle-player');
-        // Allow the player to return to its normal dimensions
+        // Reset styles
+        rufflePlayer.style.width = '';
+        rufflePlayer.style.height = '';
         rufflePlayer.style.position = '';
+        rufflePlayer.style.top = '';
+        rufflePlayer.style.left = '';
+        rufflePlayer.style.transform = '';
 
         // If the Ruffle instance has fullscreen control
         if (rufflePlayer.instance && rufflePlayer.instance.set_fullscreen) {
@@ -109,9 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
         player.load({
           data: new Uint8Array(e.target.result),
           allowFullscreen: true,
-          scale: "showAll",
+          scale: "showall",
           salign: "middle",
           quality: "high",
+          letterbox: "on",
           backgroundColor: "#000000"
         });
 
@@ -119,6 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
         player.addEventListener('load', () => {
           const rufflePlayer = player.querySelector('ruffle-player');
           if (rufflePlayer) {
+            // Store the original aspect ratio of the SWF
+            if (rufflePlayer.offsetWidth && rufflePlayer.offsetHeight) {
+              originalAspectRatio = rufflePlayer.offsetWidth / rufflePlayer.offsetHeight;
+            }
+            
             // Ensure player can resize properly
             rufflePlayer.style.maxWidth = '100%';
             rufflePlayer.style.maxHeight = '100%';
@@ -136,17 +166,68 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function addFileToHistory(fileName) {
-    fileHistory.push(fileName);
+    // Check if file already exists in history
+    const existingIndex = fileHistory.indexOf(fileName);
+    if (existingIndex !== -1) {
+      // Remove the existing entry
+      fileHistory.splice(existingIndex, 1);
+    }
+    
+    // Add to beginning of array (most recent first)
+    fileHistory.unshift(fileName);
+    
+    // Limit history to 10 items
+    if (fileHistory.length > 10) {
+      fileHistory = fileHistory.slice(0, 10);
+    }
+    
     localStorage.setItem('flashantress_history', JSON.stringify(fileHistory));
     updateHistory();
   }
 
   function updateHistory() {
-    historyContainer.innerHTML = ''; // Clear existing history
-    fileHistory.forEach(file => {
-      const listItem = document.createElement('li');
-      listItem.textContent = file;
-      historyContainer.appendChild(listItem);
+    if (fileHistory.length === 0) {
+      historyContainer.style.display = 'none';
+      return;
+    }
+    
+    historyContainer.style.display = 'block';
+    historyList.innerHTML = ''; // Clear existing history
+    
+    fileHistory.forEach(fileName => {
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-item';
+      
+      const fileNameElement = document.createElement('div');
+      fileNameElement.className = 'history-filename';
+      fileNameElement.textContent = fileName;
+      
+      const loadButton = document.createElement('button');
+      loadButton.className = 'history-load-button';
+      loadButton.textContent = 'Load';
+      loadButton.addEventListener('click', () => {
+        // Here you would load the file from history
+        // This would require storing the actual file data or URL
+        alert('Loading from history not implemented yet.');
+      });
+      
+      const removeButton = document.createElement('button');
+      removeButton.className = 'history-remove-button';
+      removeButton.textContent = 'Remove';
+      removeButton.addEventListener('click', () => {
+        const index = fileHistory.indexOf(fileName);
+        if (index !== -1) {
+          fileHistory.splice(index, 1);
+          localStorage.setItem('flashantress_history', JSON.stringify(fileHistory));
+          updateHistory();
+        }
+      });
+      
+      historyItem.appendChild(fileNameElement);
+      historyItem.appendChild(loadButton);
+      historyItem.appendChild(removeButton);
+      
+      historyList.appendChild(historyItem);
     });
   }
 });
