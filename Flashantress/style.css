@@ -116,3 +116,81 @@ h1 {
 .fullscreen-button:hover {
   background-color: rgba(0, 0, 0, 0.8);
 }
+
+/* History Section Styles */
+.history-section {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: none; /* Initially hidden, shown when items exist */
+}
+
+.history-section h2 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 1.5em;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.history-item:hover {
+  background-color: #f0f0f0;
+}
+
+.history-filename {
+  flex-grow: 1;
+  font-weight: bold;
+  margin-right: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-timestamp {
+  color: #666;
+  margin-right: 15px;
+  font-size: 0.9em;
+}
+
+.history-load-button,
+.history-remove-button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 5px;
+  transition: background-color 0.2s;
+}
+
+.history-load-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.history-load-button:hover {
+  background-color: #45a049;
+}
+
+.history-remove-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.history-remove-button:hover {
+  background-color: #d32f2f;
+}
