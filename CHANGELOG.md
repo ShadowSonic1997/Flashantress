@@ -16,3 +16,4 @@ All notable changes to Flashantress will be documented in this file.
 ### Technical Details
 - Ruffle integration for Flash emulation without Flash Player
 - Design for various screen sizes
+- Don't mind the history change for this file ;) I just messed up
