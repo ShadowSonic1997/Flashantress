@@ -5,16 +5,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const playerContainer = document.getElementById('player');
   const playerWrapper = document.getElementById('player-container');
   const fullscreenButton = document.getElementById('fullscreen-button');
-  const historyContainer = document.getElementById('history-section');
-  const historyList = document.getElementById('history-list');
-
   let ruffle = null;
   let player = null;
   let originalAspectRatio = 4/3; // Default aspect ratio
-  let fileHistory = JSON.parse(localStorage.getItem('flashantress_history') || '[]');
+  
+  // Function to load SWF content into the player
+  function loadSWFContent(fileData, fileName = 'Loaded File') {
+    // Clear previous player instance if it exists
+    if (player) {
+      playerContainer.removeChild(player);
+      player = null;
+    }
 
-  // Update history display on page load
-  updateHistory();
+    // Create a new Ruffle player instance
+    player = ruffle.createPlayer();
+    playerContainer.appendChild(player);
+    
+    // Update file name display
+    fileNameDisplay.textContent = fileName;
+    
+    // Load the SWF data into the player with configuration
+    player.load({
+      data: new Uint8Array(fileData),
+      allowFullscreen: true,
+      scale: "showall",
+      salign: "middle",
+      quality: "high",
+      letterbox: "on",
+      backgroundColor: "#000000"
+    });
+
+    // Add event listener to the created Ruffle player for better fullscreen handling
+    player.addEventListener('load', () => {
+      const rufflePlayer = player.querySelector('ruffle-player');
+      if (rufflePlayer) {
+        // Store the original aspect ratio of the SWF
+        if (rufflePlayer.offsetWidth && rufflePlayer.offsetHeight) {
+          originalAspectRatio = rufflePlayer.offsetWidth / rufflePlayer.offsetHeight;
+          console.log("Detected aspect ratio:", originalAspectRatio);
+        }
+        
+        // Ensure player can resize properly
+        rufflePlayer.style.maxWidth = '100%';
+        rufflePlayer.style.maxHeight = '100%';
+      }
+    });
+  }
 
   // Initialize Ruffle when the page loads
   window.RufflePlayer = window.RufflePlayer || {};
@@ -73,17 +109,40 @@ document.addEventListener('DOMContentLoaded', () => {
           playerHeight = playerWidth / originalAspectRatio;
         }
         
+        // Apply the calculated dimensions
         rufflePlayer.style.width = playerWidth + 'px';
         rufflePlayer.style.height = playerHeight + 'px';
+        
+        // Position the player to be centered initially
         rufflePlayer.style.position = 'absolute';
         rufflePlayer.style.top = '50%';
         rufflePlayer.style.left = '50%';
         rufflePlayer.style.transform = 'translate(-50%, -50%)';
+        
+        // Add a background color to the container to ensure any letterboxing is black
+        playerWrapper.style.backgroundColor = '#000';
 
         // Some SWF files may need config adjustment in fullscreen
         if (rufflePlayer.instance && rufflePlayer.instance.set_fullscreen) {
           rufflePlayer.instance.set_fullscreen(true);
         }
+        
+        // Add resizable handles
+        rufflePlayer.style.resize = 'both';
+        rufflePlayer.style.overflow = 'hidden';
+        
+        // Add custom handle for better visibility
+        const resizeHandle = document.createElement('div');
+        resizeHandle.id = 'resize-handle';
+        rufflePlayer.appendChild(resizeHandle);
+        
+        // Make the player draggable in fullscreen
+        enableDragging(rufflePlayer);
+        
+        // Log dimensions for debugging
+        console.log("Fullscreen dimensions - Screen:", screenWidth, "x", screenHeight);
+        console.log("Player dimensions:", playerWidth, "x", playerHeight);
+        console.log("Aspect ratio:", originalAspectRatio);
       }
     } else {
       fullscreenButton.textContent = 'Fullscreen';
@@ -91,6 +150,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset player size when exiting fullscreen
       if (player && player.querySelector('ruffle-player')) {
         const rufflePlayer = player.querySelector('ruffle-player');
+        
+        // Remove resize handle if it exists
+        const resizeHandle = rufflePlayer.querySelector('#resize-handle');
+        if (resizeHandle) {
+          rufflePlayer.removeChild(resizeHandle);
+        }
+        
+        // Disable resizing and dragging
+        rufflePlayer.style.resize = '';
+        rufflePlayer.style.overflow = '';
+        
+        // Remove event listeners for dragging
+        disableDragging(rufflePlayer);
+        
         // Reset styles
         rufflePlayer.style.width = '';
         rufflePlayer.style.height = '';
@@ -98,6 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
         rufflePlayer.style.top = '';
         rufflePlayer.style.left = '';
         rufflePlayer.style.transform = '';
+        
+        // Reset background color
+        playerWrapper.style.backgroundColor = '';
 
         // If the Ruffle instance has fullscreen control
         if (rufflePlayer.instance && rufflePlayer.instance.set_fullscreen) {
@@ -105,6 +181,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
+  }
+  
+  // Function to make an element draggable
+  function enableDragging(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    
+    element.onmousedown = dragMouseDown;
+    
+    function dragMouseDown(e) {
+      e = e || window.event;
+      e.preventDefault();
+      
+      // Only proceed if not clicking on the resize handle
+      if (e.target.id === 'resize-handle') {
+        return;
+      }
+      
+      // Get the mouse cursor position at startup
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+    }
+    
+    function elementDrag(e) {
+      e = e || window.event;
+      e.preventDefault();
+      
+      // Calculate the new cursor position
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      
+      // Set the element's new position
+      element.style.top = (element.offsetTop - pos2) + "px";
+      element.style.left = (element.offsetLeft - pos1) + "px";
+      
+      // Remove the transform as we're now using absolute positioning
+      element.style.transform = 'none';
+    }
+    
+    function closeDragElement() {
+      // Stop moving when mouse button is released
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+  }
+  
+  function disableDragging(element) {
+    element.onmousedown = null;
   }
 
   // Handle file upload
@@ -129,105 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        // Load the SWF data into the player with configuration
-        player.load({
-          data: new Uint8Array(e.target.result),
-          allowFullscreen: true,
-          scale: "showall",
-          salign: "middle",
-          quality: "high",
-          letterbox: "on",
-          backgroundColor: "#000000"
-        });
-
-        // Add event listener to the created Ruffle player for better fullscreen handling
-        player.addEventListener('load', () => {
-          const rufflePlayer = player.querySelector('ruffle-player');
-          if (rufflePlayer) {
-            // Store the original aspect ratio of the SWF
-            if (rufflePlayer.offsetWidth && rufflePlayer.offsetHeight) {
-              originalAspectRatio = rufflePlayer.offsetWidth / rufflePlayer.offsetHeight;
-            }
-            
-            // Ensure player can resize properly
-            rufflePlayer.style.maxWidth = '100%';
-            rufflePlayer.style.maxHeight = '100%';
-          }
-        });
+        loadSWFContent(e.target.result, file.name);
       } catch (error) {
         console.error("Error loading SWF:", error);
         alert("Error loading SWF file. Check console for details.");
       }
     };
     reader.readAsArrayBuffer(file);
-
-    // Add file to history
-    addFileToHistory(file.name);
   });
 
-  function addFileToHistory(fileName) {
-    // Check if file already exists in history
-    const existingIndex = fileHistory.indexOf(fileName);
-    if (existingIndex !== -1) {
-      // Remove the existing entry
-      fileHistory.splice(existingIndex, 1);
-    }
-    
-    // Add to beginning of array (most recent first)
-    fileHistory.unshift(fileName);
-    
-    // Limit history to 10 items
-    if (fileHistory.length > 10) {
-      fileHistory = fileHistory.slice(0, 10);
-    }
-    
-    localStorage.setItem('flashantress_history', JSON.stringify(fileHistory));
-    updateHistory();
-  }
-
-  function updateHistory() {
-    if (fileHistory.length === 0) {
-      historyContainer.style.display = 'none';
-      return;
-    }
-    
-    historyContainer.style.display = 'block';
-    historyList.innerHTML = ''; // Clear existing history
-    
-    fileHistory.forEach(fileName => {
-      const historyItem = document.createElement('div');
-      historyItem.className = 'history-item';
-      
-      const fileNameElement = document.createElement('div');
-      fileNameElement.className = 'history-filename';
-      fileNameElement.textContent = fileName;
-      
-      const loadButton = document.createElement('button');
-      loadButton.className = 'history-load-button';
-      loadButton.textContent = 'Load';
-      loadButton.addEventListener('click', () => {
-        // Here you would load the file from history
-        // This would require storing the actual file data or URL
-        alert('Loading from history not implemented yet.');
-      });
-      
-      const removeButton = document.createElement('button');
-      removeButton.className = 'history-remove-button';
-      removeButton.textContent = 'Remove';
-      removeButton.addEventListener('click', () => {
-        const index = fileHistory.indexOf(fileName);
-        if (index !== -1) {
-          fileHistory.splice(index, 1);
-          localStorage.setItem('flashantress_history', JSON.stringify(fileHistory));
-          updateHistory();
-        }
-      });
-      
-      historyItem.appendChild(fileNameElement);
-      historyItem.appendChild(loadButton);
-      historyItem.appendChild(removeButton);
-      
-      historyList.appendChild(historyItem);
-    });
-  }
 });
